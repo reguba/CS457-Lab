@@ -1,15 +1,18 @@
-package udp;
+package client;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.EventQueue;
+import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 
-import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -22,25 +25,44 @@ import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 
 import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.ColumnSpec;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.RowSpec;
-import java.awt.Font;
+
+import javax.swing.JTextArea;
+
+import server.ServerGui;
+
+/**
+ * GUI code for the client.
+ * 
+ * Makes use of the ClientController to interact with
+ * the server.
+ * 
+ * @author Eric Ostrowski
+ *
+ */
 
 public class ClientGui extends JFrame {
 
+	private static final long serialVersionUID = 1L;
 	private JPanel contentPane;
-	private JTextField textField;
-	private JTextField textField_1;
+	private JTextField txtIpAddress;
+	private JTextField txtPortNumber;
+	private JTextField txtFileName;
+	private JTextArea txtDiagLog;
 
 	/**
 	 * Launch the application.
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
+		//TODO Fire off the server, this should be removed after debugging
+		String[] arguments = {};
+		ServerGui.main(arguments);
+		
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -51,6 +73,7 @@ public class ClientGui extends JFrame {
 				}
 			}
 		});
+		
 	}
 	
 	
@@ -124,38 +147,66 @@ public class ClientGui extends JFrame {
 				FormFactory.RELATED_GAP_ROWSPEC,
 				FormFactory.DEFAULT_ROWSPEC,
 				FormFactory.RELATED_GAP_ROWSPEC,
+				FormFactory.DEFAULT_ROWSPEC,
+				FormFactory.RELATED_GAP_ROWSPEC,
 				FormFactory.DEFAULT_ROWSPEC,}));
 		
 		JLabel lblIp = new JLabel("IP:");
 		panel.add(lblIp, "2, 2, right, default");
 		
-		textField = new JTextField();
-		textField.setText("127.0.0.1");
-		panel.add(textField, "4, 2, left, default");
-		textField.setColumns(15);
+		txtIpAddress = new JTextField();
+		txtIpAddress.setText("127.0.0.1");
+		panel.add(txtIpAddress, "4, 2, left, default");
+		txtIpAddress.setColumns(15);
 		
 		JLabel lblPort = new JLabel("Port:");
 		panel.add(lblPort, "2, 4, right, default");
 		
-		textField_1 = new JTextField();
-		textField_1.setText("9876");
-		panel.add(textField_1, "4, 4, left, default");
-		textField_1.setColumns(5);
+		txtPortNumber = new JTextField();
+		txtPortNumber.setText("9876");
+		panel.add(txtPortNumber, "4, 4, left, default");
+		txtPortNumber.setColumns(5);
+		
+		JLabel lblFilename = new JLabel("File Name:");
+		panel.add(lblFilename, "2, 6, right, default");
+		
+		txtFileName = new JTextField();
+		panel.add(txtFileName, "4, 6, fill, default");
+		txtFileName.setColumns(10);
 		
 		JButton btnConnect = new JButton("Connect");
-		panel.add(btnConnect, "4, 6, left, default");
+		btnConnect.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+						try {
+							ClientController.requestFile(txtFileName.getText(), txtIpAddress.getText(), Integer.parseInt(txtPortNumber.getText()));
+						} catch (NumberFormatException e1) {
+							txtDiagLog.append("Invalid port number\n");
+							e1.printStackTrace();
+						} catch (UnknownHostException e1) {
+							txtDiagLog.append("Unable to determine local IP address\n");
+							e1.printStackTrace();
+						} catch (SocketException e1) {
+							txtDiagLog.append("Unable to open socket\n");
+							e1.printStackTrace();
+						} catch (IOException e1) {
+							txtDiagLog.append("Unable to send or receive data\n");
+							e1.printStackTrace();
+						}
+			}
+		});
+		panel.add(btnConnect, "4, 8, left, default");
 		
 		JPanel panel_1 = new JPanel();
 		contentPane.add(panel_1, BorderLayout.CENTER);
 		panel_1.setLayout(new BorderLayout(0, 0));
 		
-		JTextPane activityTextLog = new JTextPane();
-		activityTextLog.setFont(new Font("Arial", Font.PLAIN, 12));
-		panel_1.add(activityTextLog, BorderLayout.CENTER);
-		activityTextLog.setText("Hello World!");
-		activityTextLog.setForeground(Color.GREEN);
-		activityTextLog.setBackground(Color.BLACK);
-		activityTextLog.setEditable(false);
+		txtDiagLog = new JTextArea();
+		txtDiagLog.setLineWrap(true);
+		txtDiagLog.setFont(new Font("Arial", Font.PLAIN, 12));
+		panel_1.add(txtDiagLog, BorderLayout.CENTER);
+		txtDiagLog.setForeground(Color.GREEN);
+		txtDiagLog.setBackground(Color.BLACK);
+		txtDiagLog.setEditable(false);
 		
 		Component rigidArea = Box.createRigidArea(new Dimension(20, 20));
 		panel_1.add(rigidArea, BorderLayout.WEST);
