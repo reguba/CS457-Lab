@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 
 import utils.Utils;
 
@@ -70,6 +71,8 @@ class ClientController{
 		
 		clientSocket = new DatagramSocket();
 		
+		sendFileRequestPacket(fileName, ipAddress, port);
+		
 		byte[] sendData = new byte[1024];
 		sendData = fileName.getBytes();
 		
@@ -82,6 +85,47 @@ class ClientController{
 		
 	}
 	
+
+	private static int getFileRequestAcknowlegment() throws IOException {
+		
+		byte[] data = new byte[1024];
+		int numberOfPackets = 0;
+		
+		DatagramPacket acknowledgment = new DatagramPacket(data, data.length);
+		
+		clientSocket.receive(acknowledgment);
+		
+		ByteBuffer buff = ByteBuffer.wrap(data, 0, Integer.SIZE);
+		numberOfPackets = buff.getInt();
+		
+		if(numberOfPackets <= 0) {
+			throw new IOException("File not found");
+		}
+		
+		return numberOfPackets;
+	}
+	
+	/**
+	 * Sends a packet to the server requesting a specific file.
+	 * @param fileName The name of the file being requested.
+	 * @param ipAddress The IP address of the server.
+	 * @param port The port the server is operating on.
+	 * @throws IOException When the packet is unable to be sent.
+	 */
+	private static void sendFileRequestPacket(String fileName, String ipAddress, int port) throws IOException {
+		byte[] nameData = new byte[1024];
+		nameData = fileName.getBytes();
+		sendPacket(nameData, ipAddress, port);
+	}
+	
+	/**
+	 * Sends a packet containing the specified data to the server at the specified IP address
+	 * and port number.
+	 * @param data The data to send in the packet.
+	 * @param ipAddress The IP address of the server.
+	 * @param port The port the server is operating on.
+	 * @throws IOException When the packet is unable to be sent.
+	 */
 	private static void sendPacket(byte[] data, String ipAddress, int port) throws IOException {
 		
 		DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getByName(ipAddress), port);
