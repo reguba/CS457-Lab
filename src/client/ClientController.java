@@ -12,6 +12,37 @@ import utils.Utils;
 
 class ClientController{
 
+	//Client sends request for a file
+	//Server acknowledges receipt of request with either file not found or
+		//a packet indicating how many packets will be send to transfer the file
+	//The client will then listen for that many packets and send back acknowledgments
+	//for each packet received.
+	
+	//Step 1: File request and packet counts are confirmed
+	
+	//Client file name request
+	//1024 bytes
+	//0 - 1023 -- File name
+	
+	//Server file request response packet
+	//4 bytes
+	//0 - 3 -- Number of packets to be sent (0 if file not found)
+	
+	//Client file accept response packet
+	//4 bytes
+	//0 - 3 -- Number of packets expected
+	
+	//Step 2: Server receives client acceptance, begins to send packets
+	
+	//Server UDP data packet structure
+	//1024 bytes
+	//0 - 3 -- PacketNumber
+	//4 - 1023 -- Data
+	
+	//Client acknowledgment packet
+	//4 bytes
+	//0 - 3 -- Packet number received
+	
 	private static DatagramSocket clientSocket;
 	
 	/**
