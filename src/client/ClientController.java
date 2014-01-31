@@ -1,8 +1,6 @@
 package client;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -13,6 +11,8 @@ import utils.Utils;
 
 
 class ClientController{
+
+	private static DatagramSocket clientSocket;
 	
 	/**
 	 * Requests a file from the server at the specified IP and port.
@@ -37,25 +37,33 @@ class ClientController{
 			throw new IOException("Invalid port number");
 		}
 		
-		DatagramSocket clientSocket = new DatagramSocket();
+		clientSocket = new DatagramSocket();
 		
 		byte[] sendData = new byte[1024];
 		sendData = fileName.getBytes();
 		
-		InetAddress IPAddress = InetAddress.getByName(ipAddress);
-		DatagramPacket sendPacket = new DatagramPacket(sendData,sendData.length, IPAddress, port);
+		sendPacket(sendData, ipAddress, port);
+		DatagramPacket receivedPacket = receivePacket();
 		
-		clientSocket.send(sendPacket);
-		
-		byte[] receiveData = new byte[1024];
-		DatagramPacket receivePacket = new DatagramPacket(receiveData,receiveData.length);
-		
-		clientSocket.receive(receivePacket);
-		
-		String serverMessage = new String(receivePacket.getData());
-		System.out.println("Got from server: " + serverMessage);
+		String serverMessage = new String(receivedPacket.getData());
 		
 		clientSocket.close();
 		
+	}
+	
+	private static void sendPacket(byte[] data, String ipAddress, int port) throws IOException {
+		
+		DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getByName(ipAddress), port);
+		clientSocket.send(sendPacket);
+	}
+	
+	private static DatagramPacket receivePacket() throws IOException {
+		
+		byte[] receiveData = new byte[1024];
+		
+		DatagramPacket receivedPacket = new DatagramPacket(receiveData,receiveData.length);
+		clientSocket.receive(receivedPacket);
+		
+		return receivedPacket;
 	}
 }

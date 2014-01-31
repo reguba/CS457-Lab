@@ -21,8 +21,8 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.JTextPane;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.border.EmptyBorder;
@@ -31,10 +31,6 @@ import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.ColumnSpec;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.RowSpec;
-
-import javax.swing.JTextArea;
-
-import server.ServerGui;
 
 /**
  * GUI code for the client.
@@ -59,9 +55,6 @@ public class ClientGui extends JFrame {
 	 * Launch the application.
 	 */
 	public static void main(String[] args) throws Exception {
-		//TODO Fire off the server, this should be removed after debugging
-		String[] arguments = {};
-		ServerGui.main(arguments);
 		
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
