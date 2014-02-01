@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
+
+import javax.swing.JTextArea;
 
 	//Client sends request for a file
 	//Server acknowledges receipt of request with either file not found or
@@ -48,10 +51,14 @@ import java.nio.ByteBuffer;
 public class ServerController {
 	
 	private static DatagramSocket serverSocket;
+	private static JTextArea diagLog;
 	
-	public static void connect() throws Exception {
+	public static void acceptRequest(JTextArea log) throws SocketException, IOException {
+		
+		diagLog = log;
 		
 		serverSocket = new DatagramSocket(9876);
+		diagLog.append("Open socket on port 9875\n");
 		
 		//Receive a file request and acknowledge it
 		sendFileRequestAcknowledgment(receivePacket());
@@ -61,14 +68,15 @@ public class ServerController {
 	
 	private static void sendFileRequestAcknowledgment(DatagramPacket request) throws IOException {
 		
+		diagLog.append("Received request for: " + new String(request.getData()) + "\n");
+		
 		//Determine if file exists...
 		//Figure out how many packets it will take to send
 		//Send acknowledgment back to client
 		
-		ByteBuffer buff = ByteBuffer.allocateDirect(4);
-		//wrap a byte array
+		ByteBuffer buff = ByteBuffer.allocate(4);
 		buff.putInt(120); //TODO replace with actual value 
-		//sendPacket(result, request.getAddress(), request.getPort());
+		sendPacket(buff.array(), request.getAddress(), request.getPort());
 		
 	}
 	
@@ -87,6 +95,8 @@ public class ServerController {
 		
 		DatagramPacket receivedPacket = new DatagramPacket(receiveData,receiveData.length);
 		serverSocket.receive(receivedPacket);
+		
+		diagLog.append("Received packet from: " + receivedPacket.getAddress().toString() + " : " + Integer.toString(receivedPacket.getPort()) + "\n");
 		
 		return receivedPacket;
 	}

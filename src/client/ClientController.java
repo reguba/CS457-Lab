@@ -74,13 +74,6 @@ class ClientController{
 		sendFileRequestPacket(fileName, ipAddress, port);
 		getFileRequestAcknowledgment();
 		
-		byte[] sendData = new byte[1024];
-		sendData = fileName.getBytes();
-		
-		sendPacket(sendData, ipAddress, port);
-		DatagramPacket receivedPacket = receivePacket();
-		
-		String serverMessage = new String(receivedPacket.getData());
 		
 		clientSocket.close();
 		

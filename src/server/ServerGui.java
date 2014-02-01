@@ -7,17 +7,26 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JTextArea;
+
+import java.awt.Color;
+import java.io.IOException;
+import java.net.SocketException;
 
 public class ServerGui {
 
+	private static JTextArea txtDiagLog;
+	
 	private JFrame frame;
 
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
+		
+		txtDiagLog = new JTextArea();
+		
 		EventQueue.invokeLater(new Runnable() {
-			
 			public void run() {
 				try {
 					ServerGui window = new ServerGui();
@@ -28,6 +37,15 @@ public class ServerGui {
 			}
 		});
 		
+		try {
+			ServerController.acceptRequest(txtDiagLog);
+		} catch (SocketException e) {
+			txtDiagLog.append("Unable to open socket\n");
+			e.printStackTrace();
+		} catch (IOException e) {
+			txtDiagLog.append("Unable to send file\n");
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -45,18 +63,10 @@ public class ServerGui {
 		frame.setBounds(100, 100, 450, 300);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
-		JButton btnConnect = new JButton("Connect");
-		btnConnect.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				try {
-					ServerController.connect();
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			}
-		});
-		frame.getContentPane().add(btnConnect, BorderLayout.CENTER);
+		txtDiagLog.setLineWrap(true);
+		txtDiagLog.setForeground(Color.GREEN);
+		txtDiagLog.setBackground(Color.BLACK);
+		frame.getContentPane().add(txtDiagLog, BorderLayout.CENTER);
 	}
 
 }
