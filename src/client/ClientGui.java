@@ -31,6 +31,7 @@ import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.ColumnSpec;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.RowSpec;
+import javax.swing.JScrollPane;
 
 /**
  * GUI code for the client.
@@ -49,12 +50,24 @@ public class ClientGui extends JFrame {
 	private JTextField txtIpAddress;
 	private JTextField txtPortNumber;
 	private JTextField txtFileName;
-	private JTextArea txtDiagLog;
+	private static JTextArea txtDiagLog;
 
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) throws Exception {
+		
+		txtDiagLog = new JTextArea();
+		
+		ClientController.initializeClient(txtDiagLog);
+		
+		//Ensure the controller can shutdown properly
+		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+	        public void run() {
+	            txtDiagLog.append("Shutting down...\n");
+	            ClientController.killClient();
+	        }
+	    }, "Shutdown-thread"));
 		
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
@@ -182,7 +195,7 @@ public class ClientGui extends JFrame {
 							txtDiagLog.append("Unable to open socket\n");
 							e1.printStackTrace();
 						} catch (IOException e1) {
-							txtDiagLog.append("Unable to send or receive data\n");
+							txtDiagLog.append(e1.getMessage() + "\n");
 							e1.printStackTrace();
 						}
 			}
@@ -193,16 +206,18 @@ public class ClientGui extends JFrame {
 		contentPane.add(panel_1, BorderLayout.CENTER);
 		panel_1.setLayout(new BorderLayout(0, 0));
 		
-		txtDiagLog = new JTextArea();
-		txtDiagLog.setLineWrap(true);
-		txtDiagLog.setFont(new Font("Arial", Font.PLAIN, 12));
-		panel_1.add(txtDiagLog, BorderLayout.CENTER);
-		txtDiagLog.setForeground(Color.GREEN);
-		txtDiagLog.setBackground(Color.BLACK);
-		txtDiagLog.setEditable(false);
-		
 		Component rigidArea = Box.createRigidArea(new Dimension(20, 20));
 		panel_1.add(rigidArea, BorderLayout.WEST);
+		
+		JScrollPane scrollPane = new JScrollPane();
+		panel_1.add(scrollPane, BorderLayout.CENTER);
+		
+		txtDiagLog.setLineWrap(true);
+		txtDiagLog.setForeground(Color.GREEN);
+		txtDiagLog.setFont(new Font("Arial", Font.PLAIN, 12));
+		txtDiagLog.setEditable(false);
+		txtDiagLog.setBackground(Color.BLACK);
+		scrollPane.setViewportView(txtDiagLog);
 		
 		
 	}

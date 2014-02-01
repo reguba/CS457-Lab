@@ -1,23 +1,19 @@
 package server;
 
 import java.awt.BorderLayout;
-import java.awt.EventQueue;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JTextArea;
-
 import java.awt.Color;
+import java.awt.EventQueue;
 import java.io.IOException;
-import java.net.SocketException;
+
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.text.DefaultCaret;
 
 public class ServerGui {
-
-	private static JTextArea txtDiagLog;
 	
 	private JFrame frame;
+	private static JTextArea txtDiagLog;
 
 	/**
 	 * Launch the application.
@@ -25,6 +21,16 @@ public class ServerGui {
 	public static void main(String[] args) {
 		
 		txtDiagLog = new JTextArea();
+		((DefaultCaret)txtDiagLog.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+		txtDiagLog.setEditable(false);
+		
+		//Ensure the controller can shutdown properly
+		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+	        public void run() {
+	            txtDiagLog.append("Shutting down...\n");
+	            ServerController.killServer();
+	        }
+	    }, "Shutdown-thread"));
 		
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
@@ -39,11 +45,8 @@ public class ServerGui {
 		
 		try {
 			ServerController.acceptRequest(txtDiagLog);
-		} catch (SocketException e) {
-			txtDiagLog.append("Unable to open socket\n");
-			e.printStackTrace();
 		} catch (IOException e) {
-			txtDiagLog.append("Unable to send file\n");
+			txtDiagLog.append("Unable to receive requests\n");
 			e.printStackTrace();
 		}
 	}
@@ -63,10 +66,14 @@ public class ServerGui {
 		frame.setBounds(100, 100, 450, 300);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
+		JScrollPane scrollPane = new JScrollPane();
+		scrollPane.setAutoscrolls(true);
+		frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+		
 		txtDiagLog.setLineWrap(true);
 		txtDiagLog.setForeground(Color.GREEN);
 		txtDiagLog.setBackground(Color.BLACK);
-		frame.getContentPane().add(txtDiagLog, BorderLayout.CENTER);
+		scrollPane.setViewportView(txtDiagLog);
 	}
 
 }

@@ -8,6 +8,8 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
+import javax.swing.JTextArea;
+
 import utils.Utils;
 
 
@@ -45,6 +47,14 @@ class ClientController{
 	//0 - 3 -- Packet number received
 	
 	private static DatagramSocket clientSocket;
+	private static JTextArea diagLog;
+	
+	public static void initializeClient(JTextArea log) throws SocketException {
+		diagLog = log;
+		
+		clientSocket = new DatagramSocket();
+		clientSocket.setSoTimeout(1500);
+	}
 	
 	/**
 	 * Requests a file from the server at the specified IP and port.
@@ -69,13 +79,8 @@ class ClientController{
 			throw new IOException("Invalid port number");
 		}
 		
-		clientSocket = new DatagramSocket();
-		
 		sendFileRequestPacket(fileName, ipAddress, port);
 		getFileRequestAcknowledgment();
-		
-		
-		clientSocket.close();
 		
 	}
 	
@@ -84,7 +89,7 @@ class ClientController{
 		
 		int numberOfPackets = 0;
 		
-		DatagramPacket acknowledgment = receivePacket();
+		DatagramPacket acknowledgment = Utils.receivePacket(clientSocket, diagLog);
 		
 		ByteBuffer buff = ByteBuffer.wrap(acknowledgment.getData(), 0, Integer.SIZE);
 		numberOfPackets = buff.getInt();
@@ -92,6 +97,8 @@ class ClientController{
 		if(numberOfPackets == 0) {
 			throw new IOException("File not found");
 		}
+		
+		diagLog.append("Packets expected: " + numberOfPackets + "\n");
 		
 		return numberOfPackets;
 	}
@@ -104,32 +111,20 @@ class ClientController{
 	 * @throws IOException When the packet is unable to be sent.
 	 */
 	private static void sendFileRequestPacket(String fileName, String ipAddress, int port) throws IOException {
+		diagLog.append("Requesting file: " + fileName + "\n");
+		diagLog.append("From: " + ipAddress + " : " + Integer.toString(port) + "\n");
 		byte[] nameData = new byte[1024];
 		nameData = fileName.getBytes();
 		sendPacket(nameData, ipAddress, port);
 	}
 	
-	/**
-	 * Sends a packet containing the specified data to the server at the specified IP address
-	 * and port number.
-	 * @param data The data to send in the packet.
-	 * @param ipAddress The IP address of the server.
-	 * @param port The port the server is operating on.
-	 * @throws IOException When the packet is unable to be sent.
-	 */
+
 	private static void sendPacket(byte[] data, String ipAddress, int port) throws IOException {
-		
 		DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getByName(ipAddress), port);
 		clientSocket.send(sendPacket);
 	}
 	
-	private static DatagramPacket receivePacket() throws IOException {
-		
-		byte[] receiveData = new byte[1024];
-		
-		DatagramPacket receivedPacket = new DatagramPacket(receiveData,receiveData.length);
-		clientSocket.receive(receivedPacket);
-		
-		return receivedPacket;
+	public static void killClient() {
+		clientSocket.close();
 	}
 }
