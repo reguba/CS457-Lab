@@ -15,7 +15,7 @@ class ClientController{
 
 	//Client sends request for a file
 	//Server acknowledges receipt of request with either file not found or
-		//a packet indicating how many packets will be send to transfer the file
+	//a packet indicating how many packets will be send to transfer the file
 	//The client will then listen for that many packets and send back acknowledgments
 	//for each packet received.
 	
@@ -72,6 +72,7 @@ class ClientController{
 		clientSocket = new DatagramSocket();
 		
 		sendFileRequestPacket(fileName, ipAddress, port);
+		getFileRequestAcknowledgment();
 		
 		byte[] sendData = new byte[1024];
 		sendData = fileName.getBytes();
@@ -86,19 +87,16 @@ class ClientController{
 	}
 	
 
-	private static int getFileRequestAcknowlegment() throws IOException {
+	private static int getFileRequestAcknowledgment() throws IOException {
 		
-		byte[] data = new byte[1024];
 		int numberOfPackets = 0;
 		
-		DatagramPacket acknowledgment = new DatagramPacket(data, data.length);
+		DatagramPacket acknowledgment = receivePacket();
 		
-		clientSocket.receive(acknowledgment);
-		
-		ByteBuffer buff = ByteBuffer.wrap(data, 0, Integer.SIZE);
+		ByteBuffer buff = ByteBuffer.wrap(acknowledgment.getData(), 0, Integer.SIZE);
 		numberOfPackets = buff.getInt();
 		
-		if(numberOfPackets <= 0) {
+		if(numberOfPackets == 0) {
 			throw new IOException("File not found");
 		}
 		
