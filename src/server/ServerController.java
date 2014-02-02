@@ -1,6 +1,8 @@
 package server;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -77,12 +79,13 @@ public class ServerController {
 			
 			try {
 				
-				sendFileRequestAcknowledgment(request);
-			
+				File file = sendFileRequestAcknowledgment(request);
+				
+				
 			} catch (IOException e) {
 				diagLog.append(e.getMessage() + "\n");
 				e.printStackTrace();
-				sendBadFileAcknowledgment(request);				
+				sendBadFileAcknowledgment(request);	
 			}
 		}
 	}
@@ -106,8 +109,46 @@ public class ServerController {
 		return file;
 	}
 	
+	private static void sendFile(File file, DatagramPacket request) throws IOException {
+		int numberOfPackets = getNumberOfPacketsToSend(file);
+		
+		FileInputStream inputStream = new FileInputStream(file);
+		
+		byte[] packetData;
+		ByteBuffer buff;
+		
+		for(int i = 0; i < numberOfPackets; i++)	{
+			
+			//Send packet
+			//Wait for acknowledgment (1.5 sec)
+				//if no acknowledgment resend
+			//repeat
+			
+			//Reads 1020 bytes
+			packetData = new byte[1024];
+			
+			//First four bytes are the packet number
+			buff = ByteBuffer.wrap(packetData, 0, 4);
+			buff.putInt(i);
+			
+			//Last 1020 bytes are the data
+			inputStream.read(packetData, 4, 1020);
+			
+			Utils.sendPacket(serverSocket, packetData, request.getAddress(), request.getPort());
+			
+			while(!wasPacketReceived(i))	{
+				Utils.sendPacket(serverSocket, packetData, request.getAddress(), request.getPort());
+			}
+			
+		}
+	}
+	
+	private static boolean wasPacketReceived(int packetNumber) {
+		
+		return false;
+	}
+	
 	private static int getNumberOfPacketsToSend(File file) {
-		double toReturn = Math.ceil(file.length() / MAX_DATA);
 		return (int) Math.ceil(file.length() / MAX_DATA);
 	}
 	
@@ -117,7 +158,7 @@ public class ServerController {
 		Utils.sendPacket(serverSocket, buff.array(), request.getAddress(), request.getPort());
 	}
 	
-	private static void sendFileRequestAcknowledgment(DatagramPacket request) throws IOException {
+	private static File sendFileRequestAcknowledgment(DatagramPacket request) throws IOException {
 		
 		String filename = new String(request.getData()).trim();
 		
@@ -130,9 +171,10 @@ public class ServerController {
 		//Send acknowledgment back to client
 		
 		ByteBuffer buff = ByteBuffer.allocate(4);
-		buff.putInt(getNumberOfPacketsToSend(file)); //TODO replace with actual value 
+		buff.putInt(getNumberOfPacketsToSend(file));
 		Utils.sendPacket(serverSocket, buff.array(), request.getAddress(), request.getPort());
 		
+		return file;
 	}
 	
 	/**
