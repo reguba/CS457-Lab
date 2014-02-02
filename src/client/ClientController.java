@@ -5,6 +5,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
@@ -80,10 +81,35 @@ class ClientController{
 		}
 		
 		sendFileRequestPacket(fileName, ipAddress, port);
-		getFileRequestAcknowledgment();
+		receiveFile(getFileRequestAcknowledgment(), ipAddress, port);
 		
 	}
 	
+	private static void receiveFile(int numberOfPackets, String ipAddress, int port) throws IOException	{
+		
+		for(int i = 0; i < numberOfPackets; i++)	{
+			try {
+				Utils.receivePacket(clientSocket, diagLog);
+				sendFilePacketAcknowledgment(i, ipAddress, port);
+			} catch (SocketTimeoutException e) {
+				diagLog.append("Waiting for packet: " + i + "\n");
+				i--; //Wait for packet again
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	/**
+	 * Send a packet acknowledging the receipt of a specific packet.
+	 * @param packetNumber The number of the packet received.
+	 * @throws IOException 
+	 * @throws UnknownHostException 
+	 */
+	private static void sendFilePacketAcknowledgment(int packetNumber, String ipAddress, int port) throws UnknownHostException, IOException	{
+		ByteBuffer buff = ByteBuffer.allocate(4);
+		buff.putInt(packetNumber);
+		Utils.sendPacket(clientSocket, buff.array(), InetAddress.getByName(ipAddress), port);
+	}
 
 	private static int getFileRequestAcknowledgment() throws IOException {
 		

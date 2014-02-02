@@ -2,11 +2,11 @@ package server;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 
 import javax.swing.JTextArea;
@@ -28,10 +28,6 @@ import utils.Utils;
 	//Server file request response packet
 	//4 bytes
 	//0 - 3 -- Number of packets to be sent (0 if file not found)
-	
-	//Client file accept response packet
-	//4 bytes
-	//0 - 3 -- Number of packets expected
 	
 	//Step 2: Server receives client acceptance, begins to send packets
 	
@@ -72,7 +68,7 @@ public class ServerController {
 		}
 		
 		while(true) {
-			
+			serverSocket.setSoTimeout(0);
 			//Listen for requests
 			//Receive a file request and acknowledge it
 			DatagramPacket request = Utils.receivePacket(serverSocket, diagLog);			
@@ -80,7 +76,7 @@ public class ServerController {
 			try {
 				
 				File file = sendFileRequestAcknowledgment(request);
-				
+				sendFile(file, request);
 				
 			} catch (IOException e) {
 				diagLog.append(e.getMessage() + "\n");
@@ -117,12 +113,10 @@ public class ServerController {
 		byte[] packetData;
 		ByteBuffer buff;
 		
+		//Set the time for acknowledgments to come in
+		serverSocket.setSoTimeout(1500);
+		
 		for(int i = 0; i < numberOfPackets; i++)	{
-			
-			//Send packet
-			//Wait for acknowledgment (1.5 sec)
-				//if no acknowledgment resend
-			//repeat
 			
 			//Reads 1020 bytes
 			packetData = new byte[1024];
@@ -135,17 +129,36 @@ public class ServerController {
 			inputStream.read(packetData, 4, 1020);
 			
 			Utils.sendPacket(serverSocket, packetData, request.getAddress(), request.getPort());
+			diagLog.append("Sending packet: " + i + " \n");
 			
+			//As long as we cannot confirm packet was received, resend it
 			while(!wasPacketReceived(i))	{
 				Utils.sendPacket(serverSocket, packetData, request.getAddress(), request.getPort());
 			}
-			
 		}
+		
+		inputStream.close();
 	}
 	
-	private static boolean wasPacketReceived(int packetNumber) {
+	private static boolean wasPacketReceived(int packetNumber) throws IOException {
 		
-		return false;
+		try {
+			
+			DatagramPacket acknowledgment = Utils.receivePacket(serverSocket, diagLog);
+			ByteBuffer buff = ByteBuffer.wrap(acknowledgment.getData());
+			
+			//If the acknowledgment is inaccurate, consider it bad
+			if(buff.getInt() != packetNumber)	{
+				return false;
+			}
+			
+		} catch (SocketTimeoutException e) {
+			diagLog.append("No acknowledgment for packet: " + packetNumber + "\n");
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
 	}
 	
 	private static int getNumberOfPacketsToSend(File file) {

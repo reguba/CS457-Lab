@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
 
 import javax.swing.JTextArea;
 
@@ -26,7 +27,7 @@ public class Utils {
 		return (str == null || str.isEmpty());
 	}
 	
-	public static DatagramPacket receivePacket(DatagramSocket sock, JTextArea log) throws IOException {
+	public static DatagramPacket receivePacket(DatagramSocket sock, JTextArea log) throws SocketTimeoutException, IOException {
 		
 		byte[] receiveData = new byte[1024];
 		
