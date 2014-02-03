@@ -16,16 +16,24 @@ import javax.swing.JTextArea;
 
 import utils.Utils;
 
-
+/**
+ * The ClientController contains all of the methods required
+ * to request and receive files from a server.
+ * 
+ * @author Eric Ostrowski, Alex Schuitema, Austin Anderson
+ *
+ */
 class ClientController{
 
+	//Rules of engagement:
+	
 	//Client sends request for a file
 	//Server acknowledges receipt of request with either file not found or
 	//a packet indicating how many packets will be send to transfer the file
 	//The client will then listen for that many packets and send back acknowledgments
 	//for each packet received.
 	
-	//Step 1: File request and packet counts are confirmed
+	//Step 1: File request and file size are confirmed
 	
 	//Client file name request
 	//1024 bytes
@@ -33,15 +41,11 @@ class ClientController{
 	
 	//Server file request response packet
 	//4 bytes
-	//0 - 3 -- Number of packets to be sent (0 if file not found)
-	
-	//Client file accept response packet
-	//4 bytes
-	//0 - 3 -- Number of packets expected
+	//0 - 7 -- Number of bytes to be sent (-1 if file not found)
 	
 	//Step 2: Server receives client acceptance, begins to send packets
 	
-	//Server UDP data packet structure
+	//Server data packet structure
 	//1024 bytes
 	//0 - 3 -- PacketNumber
 	//4 - 1023 -- Data
@@ -53,6 +57,12 @@ class ClientController{
 	private static DatagramSocket clientSocket;
 	private static JTextArea diagLog;
 	
+	/**
+	 * Initializes the client.
+	 * Must be called before files are requested.
+	 * @param log The UI component on which diagnostic information should be displayed.
+	 * @throws SocketException if the socket cannot be opened.
+	 */
 	public static void initializeClient(JTextArea log) throws SocketException {
 		diagLog = log;
 		
@@ -65,6 +75,7 @@ class ClientController{
 	 * @param fileName The full name of the file being requested.
 	 * @param ipAddress The IP address of the server.
 	 * @param port The port number the server is operating on.
+	 * @param filename The name of the file to be transfered.
 	 * @throws UnknownHostException When IP address of the host cannot be determined.
 	 * @throws SocketException When the socket could not be opened or the designated port couldn't be bound.
 	 * @throws IOException When the socket is unable to either receive or send data.
@@ -87,6 +98,15 @@ class ClientController{
 		receiveFile(filename, getFileRequestAcknowledgment(), ipAddress, port);
 	}
 	
+	/**
+	 * Begins to receive the file specified from the server and writes the file
+	 * to the client's current working directory.
+	 * @param filename The name of the that is expected.
+	 * @param numberOfBytes The size of the file expected in bytes.
+	 * @param ipAddress The IP address of the server.
+	 * @param port The port the server is operating on.
+	 * @throws IOException when the client fails to receive the file.
+	 */
 	private static void receiveFile(String filename, long numberOfBytes, String ipAddress, int port) throws IOException	{
 		
 		FileOutputStream outputFile = new FileOutputStream(new File(filename));
@@ -133,8 +153,10 @@ class ClientController{
 	/**
 	 * Send a packet acknowledging the receipt of a specific packet.
 	 * @param packetNumber The number of the packet received.
-	 * @throws IOException 
-	 * @throws UnknownHostException 
+	 * @param ipAddress The IP address of the server.
+	 * @param port The port the server is operating on.
+	 * @throws IOException when the packet fails to send.
+	 * @throws UnknownHostException when the IP address cannot be resolved.
 	 */
 	private static void sendFilePacketAcknowledgment(int packetNumber, String ipAddress, int port) throws UnknownHostException, IOException	{
 		ByteBuffer buff = ByteBuffer.allocate(4);
@@ -142,6 +164,12 @@ class ClientController{
 		Utils.sendPacket(clientSocket, buff.array(), InetAddress.getByName(ipAddress), port);
 	}
 
+	/**
+	 * Waits for a file request acknowledgment from the server to determine
+	 * if the server will service the request.
+	 * @return The size of the file requested in bytes.
+	 * @throws IOException if the server has indicated that the file cannot be found.
+	 */
 	private static long getFileRequestAcknowledgment() throws IOException {
 		
 		long numberOfBytes = 0;
@@ -165,7 +193,7 @@ class ClientController{
 	 * @param fileName The name of the file being requested.
 	 * @param ipAddress The IP address of the server.
 	 * @param port The port the server is operating on.
-	 * @throws IOException When the packet is unable to be sent.
+	 * @throws IOException when the packet is unable to be sent.
 	 */
 	private static void sendFileRequestPacket(String fileName, String ipAddress, int port) throws IOException {
 		diagLog.append("Requesting file: " + fileName + "\n");
@@ -173,15 +201,14 @@ class ClientController{
 		
 		byte[] nameData = new byte[1024];
 		nameData = fileName.getBytes();
-		sendPacket(nameData, ipAddress, port);
+		Utils.sendPacket(clientSocket, nameData, ipAddress, port);
 	}
 	
-
-	private static void sendPacket(byte[] data, String ipAddress, int port) throws IOException {
-		DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getByName(ipAddress), port);
-		clientSocket.send(sendPacket);
-	}
-	
+	/**
+	 * Ensures the client shuts down appropriately.
+	 * Should be called before the client terminates
+	 * if the initialize method has been called.
+	 */
 	public static void killClient() {
 		clientSocket.close();
 	}

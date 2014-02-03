@@ -13,6 +13,19 @@ import javax.swing.JTextArea;
 
 import utils.Utils;
 
+/**
+ * The ServerController contains methods required
+ * to listen for file requests from clients and
+ * to service those requests.
+ * 
+ * @author Eric Ostrowski, Alex Schuitema, Austin Anderson
+ *
+ */
+
+public class ServerController {
+	
+	//Rules of engagement:
+
 	//Client sends request for a file
 	//Server acknowledges receipt of request with either file not found or
 	//a packet indicating how many packets will be send to transfer the file
@@ -27,11 +40,11 @@ import utils.Utils;
 	
 	//Server file request response packet
 	//4 bytes
-	//0 - 3 -- Number of bytes to be sent (-1 if file not found)
+	//0 - 7 -- Number of bytes to be sent (-1 if file not found)
 	
 	//Step 2: Server receives client acceptance, begins to send packets
 	
-	//Server UDP data packet structure
+	//Server data packet structure
 	//1024 bytes
 	//0 - 3 -- PacketNumber
 	//4 - 1023 -- Data
@@ -39,20 +52,16 @@ import utils.Utils;
 	//Client acknowledgment packet
 	//4 bytes
 	//0 - 3 -- Packet number received
-
-/**
- * Interacts with the ClientController
- * for file transfer.
- * 
- * @author Eric Ostrowski
- *
- */
-
-public class ServerController {
 	
 	private static DatagramSocket serverSocket;
 	private static JTextArea diagLog;
 	
+	/**
+	 * Sets the ServerController to listen for incoming file requests
+	 * from a client.
+	 * @param log The UI component on which diagnostic information should be displayed.
+	 * @throws IOException when an error occurs while receiving a file request packet.
+	 */
 	public static void acceptRequest(JTextArea log) throws IOException	{
 		
 		diagLog = log;
@@ -85,6 +94,13 @@ public class ServerController {
 		}
 	}
 	
+	/**
+	 * Gets the File object that represents the file specified.
+	 * @param filename The path of the file.
+	 * @return The File object representing the file specified.
+	 * @throws IOException when the path is empty or null, if the file could not be found
+	 * or if the file is a directory.
+	 */
 	private static File getFile(String filename) throws IOException {
 		
 		if(Utils.isNullOrEmptyString(filename)) {
@@ -104,6 +120,12 @@ public class ServerController {
 		return file;
 	}
 	
+	/**
+	 * Reads the specified file and begins sending packets to the client.
+	 * @param file The file to be sent to the client.
+	 * @param request The packet containing the original file request from the client.
+	 * @throws IOException when the file either cannot be read or fails to send.
+	 */
 	private static void sendFile(File file, DatagramPacket request) throws IOException {
 		int numberOfPackets = Utils.getNumberOfPacketsToSend(file);
 		
@@ -138,6 +160,12 @@ public class ServerController {
 		inputStream.close();
 	}
 	
+	/**
+	 * Verifies with the client that the packet specified was received.
+	 * @param packetNumber The number of the packet sent to the client.
+	 * @return True if an acknowledgment was received for the packet specified, false otherwise.
+	 * @throws IOException when the acknowledgment could not be received.
+	 */
 	private static boolean wasPacketReceived(int packetNumber) throws IOException {
 		
 		try {
@@ -159,15 +187,25 @@ public class ServerController {
 		return true;
 	}
 	
-	
-	
-	
+	/**
+	 * Sends an acknowledgment to the client indicating that the file
+	 * requested could not be found.
+	 * @param request The packet containing the original file request from the client.
+	 * @throws IOException when the packet is unable to be sent.
+	 */
 	private static void sendBadFileAcknowledgment(DatagramPacket request) throws IOException	{
 		ByteBuffer buff = ByteBuffer.allocate(8);
 		buff.putLong(-1); //Tell the client no data is coming
 		Utils.sendPacket(serverSocket, buff.array(), request.getAddress(), request.getPort());
 	}
 	
+	/**
+	 * Sends an acknowledgment to the client indicating that the file request
+	 * will be serviced and the size of the file to be transfered in bytes.
+	 * @param request The packet containing the original file request from the client.
+	 * @return The File object representing the file requested by the client.
+	 * @throws IOException when the file cannot be obtained or the packet cannot be sent.
+	 */
 	private static File sendFileRequestAcknowledgment(DatagramPacket request) throws IOException {
 		
 		String filename = new String(request.getData()).trim();
