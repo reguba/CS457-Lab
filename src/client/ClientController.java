@@ -170,6 +170,7 @@ class ClientController{
 	private static void sendFileRequestPacket(String fileName, String ipAddress, int port) throws IOException {
 		diagLog.append("Requesting file: " + fileName + "\n");
 		diagLog.append("From: " + ipAddress + " : " + Integer.toString(port) + "\n");
+		
 		byte[] nameData = new byte[1024];
 		nameData = fileName.getBytes();
 		sendPacket(nameData, ipAddress, port);

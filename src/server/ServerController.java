@@ -27,7 +27,7 @@ import utils.Utils;
 	
 	//Server file request response packet
 	//4 bytes
-	//0 - 3 -- Number of packets to be sent (0 if file not found)
+	//0 - 3 -- Number of bytes to be sent (-1 if file not found)
 	
 	//Step 2: Server receives client acceptance, begins to send packets
 	
