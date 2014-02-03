@@ -1,5 +1,8 @@
 package client;
 
+import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -66,9 +69,9 @@ class ClientController{
 	 * @throws SocketException When the socket could not be opened or the designated port couldn't be bound.
 	 * @throws IOException When the socket is unable to either receive or send data.
 	 */
-	public static void requestFile(String fileName, String ipAddress, int port) throws UnknownHostException, SocketException, IOException {
+	public static void requestFile(String filename, String ipAddress, int port) throws UnknownHostException, SocketException, IOException {
 		
-		if(Utils.isNullOrEmptyString(fileName)) {
+		if(Utils.isNullOrEmptyString(filename)) {
 			throw new IOException("Invalid file name");
 		}
 		
@@ -80,23 +83,51 @@ class ClientController{
 			throw new IOException("Invalid port number");
 		}
 		
-		sendFileRequestPacket(fileName, ipAddress, port);
-		receiveFile(getFileRequestAcknowledgment(), ipAddress, port);
-		
+		sendFileRequestPacket(filename, ipAddress, port);
+		receiveFile(filename, getFileRequestAcknowledgment(), ipAddress, port);
 	}
 	
-	private static void receiveFile(int numberOfPackets, String ipAddress, int port) throws IOException	{
+	private static void receiveFile(String filename, long numberOfBytes, String ipAddress, int port) throws IOException	{
+		
+		FileOutputStream outputFile = new FileOutputStream(new File(filename));
+		FileDescriptor fd = outputFile.getFD();
+		DatagramPacket filePacket;
+		
+		int numberOfPackets = Utils.getNumberOfPacketsToSend(numberOfBytes);
+		long byteCount = 0;
+		long bytesToWrite = 1020;
 		
 		for(int i = 0; i < numberOfPackets; i++)	{
+			
 			try {
-				Utils.receivePacket(clientSocket, diagLog);
+				
+				filePacket = Utils.receivePacket(clientSocket, diagLog);
 				sendFilePacketAcknowledgment(i, ipAddress, port);
+				ByteBuffer buff = ByteBuffer.wrap(filePacket.getData(), 4, 1020);
+				
+				if((byteCount + 1020) > numberOfBytes)	{
+					bytesToWrite = numberOfBytes - byteCount; //Last packet may not be full
+				}
+				
+				outputFile.write(buff.array(), 4, (int) bytesToWrite);
+				outputFile.flush();
+				
+				//Every 10KB-ish force it to write to disk
+				if(byteCount % 10200 == 0)	{
+					fd.sync();
+				}
+				
+				byteCount += bytesToWrite;
+				
 			} catch (SocketTimeoutException e) {
 				diagLog.append("Waiting for packet: " + i + "\n");
 				i--; //Wait for packet again
 				e.printStackTrace();
 			}
 		}
+		
+		outputFile.close();
+		diagLog.append("Finished receiving: " + filename + "\n");
 	}
 	
 	/**
@@ -111,22 +142,22 @@ class ClientController{
 		Utils.sendPacket(clientSocket, buff.array(), InetAddress.getByName(ipAddress), port);
 	}
 
-	private static int getFileRequestAcknowledgment() throws IOException {
+	private static long getFileRequestAcknowledgment() throws IOException {
 		
-		int numberOfPackets = 0;
+		long numberOfBytes = 0;
 		
 		DatagramPacket acknowledgment = Utils.receivePacket(clientSocket, diagLog);
 		
-		ByteBuffer buff = ByteBuffer.wrap(acknowledgment.getData(), 0, Integer.SIZE);
-		numberOfPackets = buff.getInt();
+		ByteBuffer buff = ByteBuffer.wrap(acknowledgment.getData(), 0, Long.SIZE);
+		numberOfBytes = buff.getLong();
 		
-		if(numberOfPackets == 0) {
+		if(numberOfBytes == -1) {
 			throw new IOException("File not found");
 		}
 		
-		diagLog.append("Packets expected: " + numberOfPackets + "\n");
+		diagLog.append("KB expected: " + (numberOfBytes / 1024.0) + "\n");
 		
-		return numberOfPackets;
+		return numberOfBytes;
 	}
 	
 	/**

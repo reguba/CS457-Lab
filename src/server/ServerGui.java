@@ -12,7 +12,7 @@ import javax.swing.text.DefaultCaret;
 
 public class ServerGui {
 	
-	private JFrame frame;
+	private JFrame frmServer;
 	private static JTextArea txtDiagLog;
 
 	/**
@@ -36,7 +36,7 @@ public class ServerGui {
 			public void run() {
 				try {
 					ServerGui window = new ServerGui();
-					window.frame.setVisible(true);
+					window.frmServer.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -62,13 +62,14 @@ public class ServerGui {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
-		frame = new JFrame();
-		frame.setBounds(100, 100, 450, 300);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frmServer = new JFrame();
+		frmServer.setTitle("Server");
+		frmServer.setBounds(100, 100, 450, 300);
+		frmServer.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		JScrollPane scrollPane = new JScrollPane();
 		scrollPane.setAutoscrolls(true);
-		frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+		frmServer.getContentPane().add(scrollPane, BorderLayout.CENTER);
 		
 		txtDiagLog.setLineWrap(true);
 		txtDiagLog.setForeground(Color.GREEN);

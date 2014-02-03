@@ -1,5 +1,6 @@
 package utils;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -23,8 +24,18 @@ import javax.swing.JTextArea;
  */
 public class Utils {
 	
+	private static final double MAX_DATA = 1020.0;
+	
 	public static boolean isNullOrEmptyString(String str) {
 		return (str == null || str.isEmpty());
+	}
+	
+	public static int getNumberOfPacketsToSend(File file) {
+		return getNumberOfPacketsToSend(file.length());
+	}
+	
+	public static int getNumberOfPacketsToSend(long numberOfBytes)	{
+		return (int) Math.ceil(numberOfBytes / MAX_DATA);
 	}
 	
 	public static DatagramPacket receivePacket(DatagramSocket sock, JTextArea log) throws SocketTimeoutException, IOException {

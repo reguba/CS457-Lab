@@ -116,6 +116,7 @@ public class ClientGui extends JFrame {
 	 * Create the frame.
 	 */
 	public ClientGui() {
+		setTitle("Client");
 		
 		setLookAndFeel();
 		centerFrame();

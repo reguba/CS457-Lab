@@ -52,7 +52,6 @@ public class ServerController {
 	
 	private static DatagramSocket serverSocket;
 	private static JTextArea diagLog;
-	private static final double MAX_DATA = 1020.0;
 	
 	public static void acceptRequest(JTextArea log) throws IOException	{
 		
@@ -106,7 +105,7 @@ public class ServerController {
 	}
 	
 	private static void sendFile(File file, DatagramPacket request) throws IOException {
-		int numberOfPackets = getNumberOfPacketsToSend(file);
+		int numberOfPackets = Utils.getNumberOfPacketsToSend(file);
 		
 		FileInputStream inputStream = new FileInputStream(file);
 		
@@ -118,7 +117,6 @@ public class ServerController {
 		
 		for(int i = 0; i < numberOfPackets; i++)	{
 			
-			//Reads 1020 bytes
 			packetData = new byte[1024];
 			
 			//First four bytes are the packet number
@@ -129,9 +127,9 @@ public class ServerController {
 			inputStream.read(packetData, 4, 1020);
 			
 			Utils.sendPacket(serverSocket, packetData, request.getAddress(), request.getPort());
-			diagLog.append("Sending packet: " + i + " \n");
+			diagLog.append("Sending packet: " + (i + 1) + "/" + numberOfPackets + "\n");
 			
-			//As long as we cannot confirm packet was received, resend it
+			//As long as we cannot confirm packet was received, re-send it
 			while(!wasPacketReceived(i))	{
 				Utils.sendPacket(serverSocket, packetData, request.getAddress(), request.getPort());
 			}
@@ -161,13 +159,12 @@ public class ServerController {
 		return true;
 	}
 	
-	private static int getNumberOfPacketsToSend(File file) {
-		return (int) Math.ceil(file.length() / MAX_DATA);
-	}
+	
+	
 	
 	private static void sendBadFileAcknowledgment(DatagramPacket request) throws IOException	{
-		ByteBuffer buff = ByteBuffer.allocate(4);
-		buff.putInt(0); //Tell the client no packets are coming
+		ByteBuffer buff = ByteBuffer.allocate(8);
+		buff.putLong(-1); //Tell the client no data is coming
 		Utils.sendPacket(serverSocket, buff.array(), request.getAddress(), request.getPort());
 	}
 	
@@ -179,12 +176,8 @@ public class ServerController {
 		diagLog.append("From: " + request.getAddress().toString() + " : " + Integer.toString(request.getPort()) + "\n");
 		File file = getFile(filename);
 		
-		//Determine if file exists...
-		//Figure out how many packets it will take to send
-		//Send acknowledgment back to client
-		
-		ByteBuffer buff = ByteBuffer.allocate(4);
-		buff.putInt(getNumberOfPacketsToSend(file));
+		ByteBuffer buff = ByteBuffer.allocate(8);
+		buff.putLong(file.length());
 		Utils.sendPacket(serverSocket, buff.array(), request.getAddress(), request.getPort());
 		
 		return file;
