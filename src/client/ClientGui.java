@@ -9,29 +9,26 @@ import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 
 import javax.swing.Box;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.DefaultCaret;
 
 import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.ColumnSpec;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.RowSpec;
-import javax.swing.JScrollPane;
 
 /**
  * GUI code for the client.
@@ -51,6 +48,7 @@ public class ClientGui extends JFrame {
 	private JTextField txtPortNumber;
 	private JTextField txtFileName;
 	private static JTextArea txtDiagLog;
+	private static JCheckBox chkBPacketMiss;
 
 	/**
 	 * Launch the application.
@@ -58,16 +56,8 @@ public class ClientGui extends JFrame {
 	public static void main(String[] args) throws Exception {
 		
 		txtDiagLog = new JTextArea();
-		
-		ClientController.initializeClient(txtDiagLog);
-		
-		//Ensure the controller can shutdown properly
-		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-	        public void run() {
-	            txtDiagLog.append("Shutting down...\n");
-	            ClientController.killClient();
-	        }
-	    }, "Shutdown-thread"));
+		((DefaultCaret)txtDiagLog.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+		txtDiagLog.setEditable(false);
 		
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
@@ -122,20 +112,6 @@ public class ClientGui extends JFrame {
 		centerFrame();
 		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		
-		JMenuBar menuBar = new JMenuBar();
-		setJMenuBar(menuBar);
-		
-		JMenu mnFile = new JMenu("File");
-		menuBar.add(mnFile);
-		
-		JMenuItem mntmExit = new JMenuItem("Exit");
-		mntmExit.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				System.exit(0);
-			}
-		});
-		mnFile.add(mntmExit);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -156,6 +132,8 @@ public class ClientGui extends JFrame {
 				FormFactory.RELATED_GAP_ROWSPEC,
 				FormFactory.DEFAULT_ROWSPEC,
 				FormFactory.RELATED_GAP_ROWSPEC,
+				FormFactory.DEFAULT_ROWSPEC,
+				FormFactory.RELATED_GAP_ROWSPEC,
 				FormFactory.DEFAULT_ROWSPEC,}));
 		
 		JLabel lblIp = new JLabel("IP:");
@@ -164,7 +142,7 @@ public class ClientGui extends JFrame {
 		txtIpAddress = new JTextField();
 		txtIpAddress.setText("127.0.0.1");
 		panel.add(txtIpAddress, "4, 2, left, default");
-		txtIpAddress.setColumns(15);
+		txtIpAddress.setColumns(11);
 		
 		JLabel lblPort = new JLabel("Port:");
 		panel.add(lblPort, "2, 4, right, default");
@@ -178,30 +156,31 @@ public class ClientGui extends JFrame {
 		panel.add(lblFilename, "2, 6, right, default");
 		
 		txtFileName = new JTextField();
-		panel.add(txtFileName, "4, 6, fill, default");
-		txtFileName.setColumns(10);
+		panel.add(txtFileName, "4, 6, left, default");
+		txtFileName.setColumns(11);
 		
 		JButton btnConnect = new JButton("Connect");
 		btnConnect.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-						try {
-							ClientController.requestFile(txtFileName.getText(), txtIpAddress.getText(), Integer.parseInt(txtPortNumber.getText()));
-						} catch (NumberFormatException e1) {
-							txtDiagLog.append("Invalid port number\n");
-							e1.printStackTrace();
-						} catch (UnknownHostException e1) {
-							txtDiagLog.append("Unable to determine local IP address\n");
-							e1.printStackTrace();
-						} catch (SocketException e1) {
-							txtDiagLog.append("Unable to open socket\n");
-							e1.printStackTrace();
-						} catch (IOException e1) {
-							txtDiagLog.append(e1.getMessage() + "\n");
-							e1.printStackTrace();
-						}
+				try {
+					Thread thread = new Thread(new ClientController(txtFileName.getText(), txtIpAddress.getText(), Integer.parseInt(txtPortNumber.getText()), chkBPacketMiss.isSelected(), txtDiagLog));
+					thread.start();
+				} catch (NumberFormatException e1) {
+					txtDiagLog.append("Invalid port number\n");
+					e1.printStackTrace();
+				} catch (SocketException e1) {
+					txtDiagLog.append("Unable to open socket\n");
+					e1.printStackTrace();
+				}
 			}
 		});
-		panel.add(btnConnect, "4, 8, left, default");
+		
+		JLabel lblPacketMiss = new JLabel("Packet Miss:");
+		panel.add(lblPacketMiss, "2, 8");
+		
+		chkBPacketMiss = new JCheckBox("");
+		panel.add(chkBPacketMiss, "4, 8");
+		panel.add(btnConnect, "4, 10, left, default");
 		
 		JPanel panel_1 = new JPanel();
 		contentPane.add(panel_1, BorderLayout.CENTER);
@@ -219,8 +198,6 @@ public class ClientGui extends JFrame {
 		txtDiagLog.setEditable(false);
 		txtDiagLog.setBackground(Color.BLACK);
 		scrollPane.setViewportView(txtDiagLog);
-		
-		
 	}
 
 }

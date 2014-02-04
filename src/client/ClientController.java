@@ -11,6 +11,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.Random;
 
 import javax.swing.JTextArea;
 
@@ -23,7 +24,7 @@ import utils.Utils;
  * @author Eric Ostrowski, Alex Schuitema, Austin Anderson
  *
  */
-class ClientController{
+class ClientController implements Runnable	{
 
 	//Rules of engagement:
 	
@@ -54,20 +55,21 @@ class ClientController{
 	//4 bytes
 	//0 - 3 -- Packet number received
 	
-	private static DatagramSocket clientSocket;
-	private static JTextArea diagLog;
+	private DatagramSocket clientSocket;
+	private JTextArea diagLog;
+	private String ipAddress;
+	private int port;
+	private String filename;
+	private boolean packetSkip;
 	
-	/**
-	 * Initializes the client.
-	 * Must be called before files are requested.
-	 * @param log The UI component on which diagnostic information should be displayed.
-	 * @throws SocketException if the socket cannot be opened.
-	 */
-	public static void initializeClient(JTextArea log) throws SocketException {
-		diagLog = log;
-		
+	public ClientController(String filename, String ipAddress, int port, boolean packetSkip, JTextArea log) throws SocketException	{
+		this.diagLog = log;
+		this.ipAddress = ipAddress;
+		this.port = port;
+		this.packetSkip = packetSkip;
+		this.filename = filename;
 		clientSocket = new DatagramSocket();
-		clientSocket.setSoTimeout(1500);
+		clientSocket.setSoTimeout(1500);		
 	}
 	
 	/**
@@ -76,11 +78,12 @@ class ClientController{
 	 * @param ipAddress The IP address of the server.
 	 * @param port The port number the server is operating on.
 	 * @param filename The name of the file to be transfered.
+	 * @param packetSkip Indicates whether or not the client should simulate packet loss.
 	 * @throws UnknownHostException When IP address of the host cannot be determined.
 	 * @throws SocketException When the socket could not be opened or the designated port couldn't be bound.
 	 * @throws IOException When the socket is unable to either receive or send data.
 	 */
-	public static void requestFile(String filename, String ipAddress, int port) throws UnknownHostException, SocketException, IOException {
+	private void requestFile(String filename, String ipAddress, int port, boolean packetSkip) throws UnknownHostException, SocketException, IOException {
 		
 		if(Utils.isNullOrEmptyString(filename)) {
 			throw new IOException("Invalid file name");
@@ -95,7 +98,7 @@ class ClientController{
 		}
 		
 		sendFileRequestPacket(filename, ipAddress, port);
-		receiveFile(filename, getFileRequestAcknowledgment(), ipAddress, port);
+		receiveFile(filename, getFileRequestAcknowledgment(), ipAddress, port, packetSkip);
 	}
 	
 	/**
@@ -105,9 +108,10 @@ class ClientController{
 	 * @param numberOfBytes The size of the file expected in bytes.
 	 * @param ipAddress The IP address of the server.
 	 * @param port The port the server is operating on.
+	 * @param packetSkip Indicates whether or not the client should simulate packet loss.
 	 * @throws IOException when the client fails to receive the file.
 	 */
-	private static void receiveFile(String filename, long numberOfBytes, String ipAddress, int port) throws IOException	{
+	private void receiveFile(String filename, long numberOfBytes, String ipAddress, int port, boolean packetSkip) throws IOException	{
 		
 		FileOutputStream outputFile = new FileOutputStream(new File(filename));
 		FileDescriptor fd = outputFile.getFD();
@@ -117,12 +121,35 @@ class ClientController{
 		long byteCount = 0;
 		long bytesToWrite = 1020;
 		
+		Random rng = new Random();
+		
 		for(int i = 0; i < numberOfPackets; i++)	{
 			
 			try {
 				
+				//If we are simulating packet miss then randomly start to miss packets
+				//and wait for a bit.
+				if(packetSkip && rng.nextBoolean())	{
+					
+					try {
+						Thread.sleep(500);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					
+					throw new SocketTimeoutException();
+				}
+				
 				filePacket = Utils.receivePacket(clientSocket, diagLog);
+				
+				//Only acknowledge the packet if it's what we were expecting.
+				if(!wasExpectedPacketReceived(i, filePacket))	{
+					throw new SocketTimeoutException();
+				}
+				
 				sendFilePacketAcknowledgment(i, ipAddress, port);
+				diagLog.append("Recieved packet: " + (i + 1) + "\n");
+				
 				ByteBuffer buff = ByteBuffer.wrap(filePacket.getData(), 4, 1020);
 				
 				if((byteCount + 1020) > numberOfBytes)	{
@@ -140,7 +167,7 @@ class ClientController{
 				byteCount += bytesToWrite;
 				
 			} catch (SocketTimeoutException e) {
-				diagLog.append("Waiting for packet: " + i + "\n");
+				diagLog.append("Waiting for packet: " + (i + 1) + "\n");
 				i--; //Wait for packet again
 				e.printStackTrace();
 			}
@@ -151,6 +178,17 @@ class ClientController{
 	}
 	
 	/**
+	 * Returns true if the packet specified has the same packet number as
+	 * the packet number specified.
+	 * @param packetNumber The number of the packet expected.
+	 * @param received The packet to be checked.
+	 */
+	private boolean wasExpectedPacketReceived(int packetNumber, DatagramPacket received)	{
+		ByteBuffer buff = ByteBuffer.wrap(received.getData(), 0, Integer.SIZE);
+		return (buff.getInt() == packetNumber);
+	}
+	
+	/**
 	 * Send a packet acknowledging the receipt of a specific packet.
 	 * @param packetNumber The number of the packet received.
 	 * @param ipAddress The IP address of the server.
@@ -158,7 +196,7 @@ class ClientController{
 	 * @throws IOException when the packet fails to send.
 	 * @throws UnknownHostException when the IP address cannot be resolved.
 	 */
-	private static void sendFilePacketAcknowledgment(int packetNumber, String ipAddress, int port) throws UnknownHostException, IOException	{
+	private void sendFilePacketAcknowledgment(int packetNumber, String ipAddress, int port) throws UnknownHostException, IOException	{
 		ByteBuffer buff = ByteBuffer.allocate(4);
 		buff.putInt(packetNumber);
 		Utils.sendPacket(clientSocket, buff.array(), InetAddress.getByName(ipAddress), port);
@@ -170,7 +208,7 @@ class ClientController{
 	 * @return The size of the file requested in bytes.
 	 * @throws IOException if the server has indicated that the file cannot be found.
 	 */
-	private static long getFileRequestAcknowledgment() throws IOException {
+	private long getFileRequestAcknowledgment() throws IOException {
 		
 		long numberOfBytes = 0;
 		
@@ -195,7 +233,7 @@ class ClientController{
 	 * @param port The port the server is operating on.
 	 * @throws IOException when the packet is unable to be sent.
 	 */
-	private static void sendFileRequestPacket(String fileName, String ipAddress, int port) throws IOException {
+	private void sendFileRequestPacket(String fileName, String ipAddress, int port) throws IOException {
 		diagLog.append("Requesting file: " + fileName + "\n");
 		diagLog.append("From: " + ipAddress + " : " + Integer.toString(port) + "\n");
 		
@@ -209,7 +247,22 @@ class ClientController{
 	 * Should be called before the client terminates
 	 * if the initialize method has been called.
 	 */
-	public static void killClient() {
+	public void killClient() {
+		clientSocket.close();
+	}
+
+	@Override
+	public void run() {
+		try {
+			requestFile(filename, ipAddress, port, packetSkip);
+		} catch (UnknownHostException e1) {
+			diagLog.append("Unable to determine local IP address\n");
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			diagLog.append(e1.getMessage() + "\n");
+			e1.printStackTrace();
+		}
+		
 		clientSocket.close();
 	}
 }

@@ -179,7 +179,7 @@ public class ServerController {
 			}
 			
 		} catch (SocketTimeoutException e) {
-			diagLog.append("No acknowledgment for packet: " + packetNumber + "\n");
+			diagLog.append("No acknowledgment for packet: " + (packetNumber + 1) + "\n");
 			e.printStackTrace();
 			return false;
 		}
