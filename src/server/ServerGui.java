@@ -6,19 +6,23 @@ import java.awt.EventQueue;
 import java.io.IOException;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.text.DefaultCaret;
 
 public class ServerGui {
 	
-	private JFrame frmServer;
+	private static JFrame frmServer;
 	private static JTextArea txtDiagLog;
 
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
+		
+		String port = (String)JOptionPane.showInputDialog(frmServer, "Enter port number:",
+                "Server", JOptionPane.PLAIN_MESSAGE, null, null, "");
 		
 		txtDiagLog = new JTextArea();
 		((DefaultCaret)txtDiagLog.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
@@ -33,6 +37,7 @@ public class ServerGui {
 	    }, "Shutdown-thread"));
 		
 		EventQueue.invokeLater(new Runnable() {
+			@SuppressWarnings("static-access")
 			public void run() {
 				try {
 					ServerGui window = new ServerGui();
@@ -44,7 +49,9 @@ public class ServerGui {
 		});
 		
 		try {
-			ServerController.acceptRequest(txtDiagLog);
+			ServerController.acceptRequest(port, txtDiagLog);
+		} catch (NumberFormatException e)	{
+			txtDiagLog.append("Invalid port number\n");
 		} catch (IOException e) {
 			txtDiagLog.append("Unable to receive requests\n");
 			e.printStackTrace();

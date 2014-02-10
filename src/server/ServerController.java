@@ -62,13 +62,15 @@ public class ServerController {
 	 * @param log The UI component on which diagnostic information should be displayed.
 	 * @throws IOException when an error occurs while receiving a file request packet.
 	 */
-	public static void acceptRequest(JTextArea log) throws IOException	{
+	public static void acceptRequest(String port, JTextArea log) throws NumberFormatException, IOException	{
 		
 		diagLog = log;
+		int portNumber = Integer.parseInt(port);
+		
 		
 		try {
-			serverSocket = new DatagramSocket(9876);
-			diagLog.append("Opened socket on port 9876\n");
+			serverSocket = new DatagramSocket(portNumber);
+			diagLog.append("Opened socket on port: " + Integer.toString(portNumber) + "\n");
 		
 		} catch (SocketException e) {
 			diagLog.append(e.getMessage() + "\n");
