@@ -184,7 +184,7 @@ class ClientController implements Runnable	{
 				}
 				
 				//If we've missed the same packet 10 times, call it quits
-				if(packetMisses == 10) {
+				if(packetMisses == 20) {
 					diagLog.append("Connection problem with server detected\n");
 					outputFile.close();
 					return;
