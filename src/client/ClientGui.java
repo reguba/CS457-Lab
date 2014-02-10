@@ -29,6 +29,7 @@ import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.ColumnSpec;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.RowSpec;
+import javax.swing.JProgressBar;
 
 /**
  * GUI code for the client.
@@ -49,6 +50,7 @@ public class ClientGui extends JFrame {
 	private JTextField txtFileName;
 	private static JTextArea txtDiagLog;
 	private static JCheckBox chkBPacketMiss;
+	private static JProgressBar progressBar;
 
 	/**
 	 * Launch the application.
@@ -56,6 +58,8 @@ public class ClientGui extends JFrame {
 	public static void main(String[] args) throws Exception {
 		
 		txtDiagLog = new JTextArea();
+		progressBar = new JProgressBar();
+		
 		((DefaultCaret)txtDiagLog.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 		txtDiagLog.setEditable(false);
 		
@@ -134,6 +138,12 @@ public class ClientGui extends JFrame {
 				FormFactory.RELATED_GAP_ROWSPEC,
 				FormFactory.DEFAULT_ROWSPEC,
 				FormFactory.RELATED_GAP_ROWSPEC,
+				FormFactory.DEFAULT_ROWSPEC,
+				FormFactory.RELATED_GAP_ROWSPEC,
+				FormFactory.DEFAULT_ROWSPEC,
+				FormFactory.RELATED_GAP_ROWSPEC,
+				FormFactory.DEFAULT_ROWSPEC,
+				FormFactory.RELATED_GAP_ROWSPEC,
 				FormFactory.DEFAULT_ROWSPEC,}));
 		
 		JLabel lblIp = new JLabel("IP:");
@@ -163,7 +173,7 @@ public class ClientGui extends JFrame {
 		btnConnect.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				try {
-					Thread thread = new Thread(new ClientController(txtFileName.getText(), txtIpAddress.getText(), Integer.parseInt(txtPortNumber.getText()), chkBPacketMiss.isSelected(), txtDiagLog));
+					Thread thread = new Thread(new ClientController(txtFileName.getText(), txtIpAddress.getText(), Integer.parseInt(txtPortNumber.getText()), chkBPacketMiss.isSelected(), txtDiagLog, progressBar));
 					thread.start();
 				} catch (NumberFormatException e1) {
 					txtDiagLog.append("Invalid port number\n");
@@ -181,6 +191,11 @@ public class ClientGui extends JFrame {
 		chkBPacketMiss = new JCheckBox("");
 		panel.add(chkBPacketMiss, "4, 8");
 		panel.add(btnConnect, "4, 10, left, default");
+		
+		JLabel lblProgress = new JLabel("Progress:");
+		panel.add(lblProgress, "4, 14");
+		
+		panel.add(progressBar, "4, 16");
 		
 		JPanel panel_1 = new JPanel();
 		contentPane.add(panel_1, BorderLayout.CENTER);

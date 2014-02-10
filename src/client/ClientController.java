@@ -13,6 +13,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import javax.swing.JProgressBar;
 import javax.swing.JTextArea;
 
 import utils.Utils;
@@ -61,15 +62,17 @@ class ClientController implements Runnable	{
 	private int port;
 	private String filename;
 	private boolean packetSkip;
+	private JProgressBar progressBar;
 	
-	public ClientController(String filename, String ipAddress, int port, boolean packetSkip, JTextArea log) throws SocketException	{
+	public ClientController(String filename, String ipAddress, int port, boolean packetSkip, JTextArea log, JProgressBar bar) throws SocketException	{
 		this.diagLog = log;
+		this.progressBar = bar;
 		this.ipAddress = ipAddress;
 		this.port = port;
 		this.packetSkip = packetSkip;
 		this.filename = filename;
 		clientSocket = new DatagramSocket();
-		clientSocket.setSoTimeout(1500);		
+		clientSocket.setSoTimeout(1500);	
 	}
 	
 	/**
@@ -97,6 +100,7 @@ class ClientController implements Runnable	{
 			throw new IOException("Invalid port number");
 		}
 		
+		progressBar.setValue(0);
 		sendFileRequestPacket(filename, ipAddress, port);
 		receiveFile(filename, getFileRequestAcknowledgment(), ipAddress, port, packetSkip);
 	}
@@ -118,6 +122,8 @@ class ClientController implements Runnable	{
 		DatagramPacket filePacket;
 		
 		int numberOfPackets = Utils.getNumberOfPacketsToSend(numberOfBytes);
+		int lastPacketMissed = -1;
+		int packetMisses = 0; //Track how many times the same packet is missed
 		long byteCount = 0;
 		long bytesToWrite = 1020;
 		
@@ -148,7 +154,7 @@ class ClientController implements Runnable	{
 				}
 				
 				sendFilePacketAcknowledgment(i, ipAddress, port);
-				diagLog.append("Recieved packet: " + (i + 1) + "\n");
+				//diagLog.append("Recieved packet: " + (i + 1) + "\n");
 				
 				ByteBuffer buff = ByteBuffer.wrap(filePacket.getData(), 4, 1020);
 				
@@ -165,9 +171,25 @@ class ClientController implements Runnable	{
 				}
 				
 				byteCount += bytesToWrite;
+				progressBar.setValue((int)((100.0 * byteCount) / numberOfBytes));
 				
 			} catch (SocketTimeoutException e) {
 				diagLog.append("Waiting for packet: " + (i + 1) + "\n");
+				
+				if(i == lastPacketMissed)	{
+					packetMisses++;
+				} else {
+					lastPacketMissed = i;
+					packetMisses = 0;
+				}
+				
+				//If we've missed the same packet 10 times, call it quits
+				if(packetMisses == 10) {
+					diagLog.append("Connection problem with server detected\n");
+					outputFile.close();
+					return;
+				}
+				
 				i--; //Wait for packet again
 				e.printStackTrace();
 			}
